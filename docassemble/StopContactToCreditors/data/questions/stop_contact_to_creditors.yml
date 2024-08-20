@@ -1,0 +1,368 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALAnyState:any_state.yml
+---
+metadata:
+  title: >-
+    Stop contact to creditors
+  short title: >-
+    Stop contact to creditors
+  description: |-
+    This interview helps someone in Minnesota write a Stop Contact to Creditors Letter.
+  tags:
+    - "MO-12-00-00-00"
+  authors:
+    - Gabriela Riveros
+  original_form:
+    - chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.lawhelpmn.org/sites/default/files/2018-11/Blank%20Stop%20Contact%20Letter%20to%20Creditors.pdf
+  allowed_courts: []
+  typical_role: "unknown"
+  al_weaver_version: "1.10.2"
+  generated_on: "2023-11-09"
+---
+code: |
+  # This controls the default country and list of states in address field questions
+  AL_DEFAULT_COUNTRY = "US"
+---
+code: |
+  # This controls the default state in address field questions
+  AL_DEFAULT_STATE = "MN"
+---
+code: |
+  github_repo_name =  'docassemble-StopContactToCreditors'
+---
+code: |
+  interview_short_title = "Write a Stop Contact to Creditors Letter"
+---
+code: |
+  al_form_type = "letter" 
+---
+objects:
+  - users: ALPeopleList.using(ask_number=True,target_number=1)
+  - other_parties: ALPeopleList.using(ask_number=True,target_number=1)
+  - debt_collectors: ALPeopleList.using(ask_number=True,target_number=1)
+---
+sections:
+  - review_stop_contact_to_creditors: Review your answers
+---
+#################### Interview order #####################
+comment: |
+  Controls order and branching logic for questions specific to this form
+id: interview_order_stop_contact_to_creditors
+code: |
+  # Set the allowed courts for this interview
+  nav.set_section("review_stop_contact_to_creditors")
+  # Below sets the user_role and user_ask_role by asking a question.
+  # You can set user_ask_role directly instead to either 'plaintiff' or 'defendant'
+ 
+  users.gather()
+  set_parts(subtitle=str(users))
+  account_number=account1_number
+  reason_for_dispute
+  set_progress(20)
+  signature_date
+  users[0].address.address
+  debt_collectors.gather()
+  set_progress(40)
+  debt_collectors[0].address.address
+  other_parties.gather()
+  interview_order_stop_contact_to_creditors = True
+---
+###################### Main order ######################
+comment: |
+  This block includes the logic for standalone interviews.
+  Delete mandatory: True to include in another interview
+mandatory: True
+code: |
+  al_intro_screen
+  stop_contact_to_creditors_intro
+  interview_order_stop_contact_to_creditors
+  signature_date
+  # Store anonymous data for analytics / statistics
+  store_variables_snapshot(
+      persistent=True,
+      data={
+          "zip": showifdef("users[0].address.zip"),
+          "reached_interview_end": True,
+      },
+  )
+  stop_contact_to_creditors_download
+---
+comment: |
+  This question is used to introduce your interview. Please customize
+id: Stop_contact_to_creditors
+continue button field: stop_contact_to_creditors_intro
+question: |
+  Stop contact to creditors
+subquestion: |
+  This interview will help you write a Stop Contact to Creditors Letter.
+  
+  Before you get started, please gather:
+  
+  1. Debt Collection Agency Name
+  2. Debt Collector's Address
+  3. Your Account information with your Creditor
+  4. Creditor Name
+  
+  
+  
+  When you are finished, you will need to:
+  
+  1. Print 2 copies of your letters
+  1. Sign both copies, send one and keep the other.
+  
+  Most people take about 2 minutes to finish this interview.
+---
+id: Creditor Information
+question: |
+  Account Information
+subquestion: |
+  Information about your account with the Creditor
+fields:
+  - "Creditor Name": other1_parties
+    maxlength: 32
+    help: |
+      The creditor is who the original debt is with (i.e. department store, dealership, credit card, etc.)
+  - "Your Account Number": creditor_account_number
+    maxlength: 32
+  - note: |
+      Information about your Creditors Account with the Debtor Collection Agency
+# the debt collection agency is the debt collector the creditor hired to assist in collecting the debt
+  - "Agency Name": debt2_collectors
+    maxlength: 22
+    help: |
+      The debt collection agency is a third-party that either bought your debt from the original creditor or was hired by the original creditor to assist in collecting the debt.
+  - "Account number": account1_number
+    maxlength: 16
+
+---
+id: Status of the Debt
+question: |
+  Status of the Debt
+subquestion: |
+  Choose Yes for only ONE of the following:
+fields:
+  - "no label": reason_for_dispute
+    datatype: checkboxes
+    maxlength: 2
+    choices: 
+     - I dispute that I owe any part of this debt: debt_is_not_owed
+     - I dispute that I owe part of this debt: debt_is_not_all_owed
+     - All of my income comes from government benefits program: all_income_from_benefits
+validation code: |
+      not ( reason_for_dispute["debt_is_not_owed"] and reason_for_dispute["debt_is_not_all_owed"]) or validation_error("You can't owe part of the debt and none at the same time", field= "reason_for_dispute") 
+---
+id: preview stop_contact_to_creditors
+question: |
+  Preview your form before you sign it
+subquestion: |
+  Here is a preview of the form you will sign on the next page.   
+  
+  ${ al_recipient_bundle.as_pdf(key='preview') }
+
+  Click the image to open it in a new tab. Click the "Edit answers" button
+  to edit your answers.
+
+  ${ action_button_html(url_action('review_stop_contact_to_creditors'), label='Edit answers', color='info') }
+  
+  Remember to come back to this window to continue and sign your form.
+continue button field: stop_contact_to_creditors_preview_question    
+---
+code: |
+  signature_fields = ['users[0].signature']
+---
+id: stop contact to creditors review screen
+event: review_stop_contact_to_creditors
+question: |
+  Review your answers
+review:
+  - Edit: signature_date
+    button: |
+      **Date of signature**:
+      ${ signature_date }
+  - Edit: users.revisit
+    button: |
+      **Users**
+
+      % for item in users:
+        * ${ item }
+      % endfor
+  - Edit: debt_collectors.revisit
+    button: |
+      **Debt collectors**
+
+      % for item in debt_collectors:
+        * ${ item }
+      % endfor
+  - Edit: account_number
+    button: |
+      **Account Number**:
+      ${ account_number }
+  - Edit: other_parties.revisit
+    button: |
+      **Other parties**
+
+      % for item in other_parties:
+        * ${ item }
+      % endfor
+  - Edit: other1_parties
+    button: |
+      **Creditor Name**:
+      ${ other1_parties }
+  - Edit: creditor_account_number
+    button: |
+      **Your Account Number with the Creditor**:
+      ${ creditor_account_number }
+  - Edit: debt2_collectors
+    button: |
+      **Debt Collection Agency Name**:
+      ${ debt2_collectors }
+  - Edit: account1_number
+    button: |
+      **Account number with Debt Collection Agency**:
+      ${ account1_number }
+  - Edit: debt_is_not_owed
+    button: |
+      **I dispute that I owe any part of this debt**:
+      ${ word(yesno(debt_is_not_owed)) }
+  - Edit: debt_is_not_all_owed
+    button: |
+      **I dispute that I owe part of this debt**:
+      ${ word(yesno(debt_is_not_all_owed)) }
+  - Edit: all_income_from_benefits
+    button: |
+      **All of my income comes from government benefits program**:
+      ${ all_income_from_benefits }
+---
+continue button field: users.revisit
+question: |
+  Edit users
+subquestion: |
+  ${ users.table }
+
+  ${ users.add_action() }
+---
+table: users.table
+rows: users
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+  - Address: |
+      row_item.address.block() if defined("row_item.address.address") else ""
+  - Signature: |
+      row_item.signature if defined("row_item.signature") else ""
+edit:
+  - name.first
+  - address.address
+  - signature
+confirm: True
+
+---
+continue button field: debt_collectors.revisit
+question: |
+  Edit debt_collectors
+subquestion: |
+  ${ debt_collectors.table }
+
+  ${ debt_collectors.add_action() }
+---
+table: debt_collectors.table
+rows: debt_collectors
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+  - Address: |
+      row_item.address.block() if defined("row_item.address.address") else ""
+edit:
+  - name.first
+  - address.address
+confirm: True
+
+---
+continue button field: other_parties.revisit
+question: |
+  Edit other_parties
+subquestion: |
+  ${ other_parties.table }
+
+  ${ other_parties.add_action() }
+---
+table: other_parties.table
+rows: other_parties
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+edit:
+  - name.first
+confirm: True
+
+---
+id: download stop_contact_to_creditors
+event: stop_contact_to_creditors_download
+question: |
+  All done
+subquestion: |
+  Thank you ${users}. Your form is ready to download and deliver.
+  
+  View, download and send your form below. Click the "Edit answers" button to fix any mistakes.
+
+  ${ action_button_html(url_action('review_stop_contact_to_creditors'), label='Edit answers', color='info') }
+  
+  
+  ${ al_user_bundle.download_list_html() }
+  
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100
+---
+# ALDocument objects specify the metadata for each template
+objects:
+  - stop_contact_to_creditors_Post_interview_instructions: ALDocument.using(title="Instructions", filename="stop_contact_to_creditors_next_steps.docx", enabled=True, has_addendum=False)
+  - stop_contact_to_creditors_attachment: ALDocument.using(title="Stop contact to creditors", filename="stop_contact_to_creditors", enabled=True, has_addendum=False, )
+---
+# Bundles group the ALDocuments into separate downloads, such as for court and for the user
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[stop_contact_to_creditors_Post_interview_instructions, stop_contact_to_creditors_attachment], filename="stop_contact_to_creditors", title="All forms to download for your records", enabled=True)
+  - al_recipient_bundle: ALDocumentBundle.using(elements=[stop_contact_to_creditors_attachment],  filename="stop_contact_to_creditors", title="All forms to file", enabled=True)
+---
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the same template is 
+# used for "preview" and "final" keys, and logic in the template checks the value of 
+# `i` to show or hide the user's signature
+attachment:
+  name: Post-interview-Instructions
+  filename: stop_contact_to_creditors_next_steps
+  docx template file: stop_contact_to_creditors_next_steps.docx
+  variable name: stop_contact_to_creditors_Post_interview_instructions[i]
+  skip undefined: True
+  tagged pdf: True
+---
+attachment:
+  name: stop contact to creditors
+  filename: stop_contact_to_creditors
+  variable name: stop_contact_to_creditors_attachment[i]
+  skip undefined: True
+  pdf template file: stop_contact_to_creditors.pdf
+  fields:
+      - "signature_date": ${ signature_date }
+      - "users1_name": ${ users[0] }
+      - "users1_address_line_one": ${ users[0].address.line_one() }
+      - "users1_address_line_two": ${ users[0].address.line_two() }
+      - "debt_collectors": ${ debt_collectors }
+      - "debt_collectors_address_line_one": ${ debt_collectors[0].address.line_one() }
+      - "debt_collectors_address_line_two": ${ debt_collectors[0].address.line_two() }
+      - "account_number": ${ account1_number }
+      - "other_parties": ${ other_parties }
+      - "other1_parties": ${ other1_parties }
+      - "creditor_account_number": ${ creditor_account_number }
+      - "debt2_collectors": ${ debt2_collectors }
+      - "account1_number": ${ account1_number }
+      - "debt_is_not_owed": ${ reason_for_dispute["debt_is_not_owed"] }
+      - "debt_is_not_all_owed": ${ reason_for_dispute["debt_is_not_all_owed"] }
+      - "all_income_from_benefits": ${ reason_for_dispute["all_income_from_benefits"] }
+      - "users1_signature": ${ users[0].signature }
+      - "users2_name": ${ users[1] }
+
+
+
